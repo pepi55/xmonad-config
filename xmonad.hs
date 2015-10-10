@@ -137,9 +137,9 @@ colorRedAlt = "#E0105F"
 colorGreen = "#66FF66"
 colorGreenAlt = "#558965"
 
-boxLeftIcon = "~/.xbm_icons/boxleft.xbm"
-boxLeftIcon2 = "~/.xbm_icons/boxleft2.xbm"
-boxRightIcon = "~/.xbm_icons/boxright.xbm"
+boxLeftIcon = "~/.xmonad/xbm_icons/boxleft.xbm"
+boxLeftIcon2 = "~/.xmonad/xbm_icons/boxleft2.xbm"
+boxRightIcon = "~/.xmonad/xbm_icons/boxright.xbm"
 
 panelHeight = 16
 boxHeight = 14
@@ -299,6 +299,16 @@ green2BBoxPP = BoxPP
     }
 
 -- Dzen logger clickable areas
+calendarCA :: CA
+calendarCA = CA
+    {
+    leftClickCA = "~/.xmonad/dzencal.sh"
+    middleClickCA = "~/.xmonad/dzencal.sh"
+    rightClickCA = "~/.xmonad/dzencal.sh"
+    wheelUpCA = "~/.xmonad/dzencal.sh"
+    wheelDownCA = "~/.xmonad/dzencal.sh"
+    }
+
 layoutCA :: CA
 layoutCA = CA
     {
@@ -333,153 +343,328 @@ focusCA = CA
 myWorkspaces :: [WorkspaceId]
 myWorkspaces = map show $ [1 .. 9] ++ [0]
 
--- Fonts, icons, etc
-myFontB = "-*-terminus-bold-*-*-*-16-160-72-72-*-*-iso8859-*"
-myShell = "zsh"
-myIconDir = "~/.dzen/icons/"
+-- Workspace names
+workSpaceNames :: [WorkspaceId]
+workSpaceNames =
+    [
+    "Terminal",
+    "Web",
+    "Other",
+    "Other",
+    "Other",
+    "Other",
+    "Other",
+    "Other",
+    "Other",
+    "Other",
+    ]
 
--- GSConfig optiones:
-myGSConfig = defaultGSConfig
-    {
-    gs_cellheight = 50,
-    gs_cellwidth = 250,
-    gs_cellpadding = 10,
-    gs_font = "" ++ myFont ++ ""
-    }
+-- Layout names (must be 1 word)
+myTileName = "Tiled"
+myMirrName = "MirrorTiled"
+myMosAName = "Mosaic"
+myOneBName = "OneBig"
+myCst1Name = "Default"
+myCst2Name = "MasterTab"
+myCst3Name = "Web"
+myChatName = "Chat"
+myFTabName = "FullTab"
+myFloaName = "Float"
 
--- XPConfig optiones:
-myXPConfig = defaultXPConfig
-    {
-    font = "" ++ myFont ++ "",
-    fgColor = "" ++ myNormalFGColor ++ "",
-    bgColor = "" ++ myNormalBGColor ++ "",
-    fgHLight = "" ++ myNormalFGColor ++ "",
-    bgHLight = "" ++ myUrgentBGColor ++ "",
-    borderColor = "" ++ myFocusedBorderColor ++ "",
-    promptBorderWidth = 1,
-    position = Bottom,
-    height = 16,
-    historySize = 100
-    }
+-- Startup hook config
+myStartupHook =
+    (setDefaultCursor xC_left_ptr) <+>
+    (spawn "feh --bg-scale ~/Pictures/background.jpg") <+>
+    (startTimer 1 >>= XS.put . TID)
 
--- Theme optiones:
-myTheme = defaultTheme
-    {
-    activeColor = "" ++ myFocusedBGColor ++ "",
-    inactiveColor = "" ++ myDzenBGColor ++ "",
-    urgentColor = "" ++ myUrgentBGColor ++ "",
-    activeBorderColor = "" ++ myFocusedBorderColor ++ "",
-    inactiveBorderColor = "" ++ myNormalBorderColor ++ "",
-    urgentBorderColor = "" ++ myNormalBorderColor ++ "",
-    activeTextColor = "" ++ myFocusedFGColor ++ "",
-    inactiveTextColor = "" ++ myDzenFGColor ++ "",
-    urgentTextColor = "" ++ myUrgentFGColor ++ "",
-    font = "" ++ myFont ++ "",
-    }
+-- Event hook config
+-- Wrapper for the timer id, so it can be stored as custom mutable state
+data TidState = TID TimerId deriving Typeable
 
--- Statusbar optiones:
-myStatusBar = "dzen2 -x '0' -y '0' -h '16' -w '900' -ta 'l' -fg '" ++ myNormalFGColor ++ "' -bg '" ++ myNormalBGColor ++ "' -fn '" ++ myFont ++ "'"
-myTopBar = "conky -c .conkytop | dzen2 -x '900' -y '0' -h '16' -w '124' -ta 'r' -fg '" ++ myDzenFGColor ++ "' -bg '" ++ myNormalBGColor ++ "' -fn '" ++ myFont ++ "'"
-myMPDBar = "conky -c .conkympd | dzen2 -x '0' -y '600' -h '16' -w '1000' -ta 'l' -fg '" ++ myDzenFGColor ++ "' -bg '" ++ myNormalBGColor ++ "' -fn '" ++ myFont ++ "'"
-myHDDBar = "conky -c .conkyhdd | dzen2 -x '1000' -y '600' -h '16' -w '24' -ta 'r' -fg '" ++ myDzenFGColor ++ "' -bg '" ++ myNormalBGColor ++ "' -fn '" ++ myFont ++ "'"
+instance ExtensionClass TidState where
+    initialValue = TID 0
 
--- Urgency hint optiones:
+-- Handle event hook
+myHandleEventHook =
+    fullscreenEventHook <+>
+    docksEventHook <+>
+    clockEventHook <+>
+    handleTimerEvent <+>
+    notFocusFloat where
+        clockEventHook e = do
+            (TID t) <- XS.get
+            handleTimer t e $ do
+                startTimer 1 >>= XS.put . TID
+                ask >>= logHook . config
+                return Nothing
+            return $ All True
+        notFocusFloat = followOnlyIf (fmap not isFloat) where
+            isFloat = fmap (isSuffixOf myFloatName) $ gets (description . W.layout . W.workspace . W.current . windowset)
+
+-- Layout config
+-- Tabbed transformer (W+f)
+data TABBED = TABBED deriving (Read, Show, Eq, Typeable)
+instance Transformer TABBED Window where
+    transform TABBED x k = k myFTabU (\_ -> X)
+
+-- Floated transformer (W+ctrl+f)
+data FLOATED = FLOATED deriving (Read, Show, Eq, Typeable)
+instance Transformer FLOATED Window where
+    transform FLOATED x k = k myFloaU (\_ -> X)
+
+-- Unique layouts
+myFTabU = smartBorders $ named ("Unique " ++ myFTabName) $ tabbedAlways shrinkText myTitleTheme
+myFloaU = named ("Unique " ++ myFloaName) $ mouseResize $ noFrillsDeco shrinkText myTitleTheme simplestFloat
+
+-- Layout hook
+myLayoutHook =
+    gaps [(U, panelHeight), (D, panelHeight)] $
+    configurableNavigation noNavigationBorders $
+    minimize $
+    maximize $
+    mkToggle (single TABBED) $
+    mkToggle (single FLOATED) $
+    mkToggle (single MIRROR) $
+    mkToggle (single REFLECTX) $
+    mkToggle (single REFLECTY) $
+    onWorkspace (myWorkspaces !! 1) codeLayouts $
+    onWorkspace (myWorkspaces !! 2) webLayouts $
+    allLayouts where
+        webLayouts = (myToggleL myCst3 myCst3Name) ||| (myToggleL myCst1 myCst1Name)
+        codeLayouts = (myToggleL myCst2 myCst2Name) ||| (myToggleL myOneB myOneBName) ||| (myToggleL myTile myTileName)
+        allLayouts =
+            (myToggleL myCst1 myCst1Name) |||
+            (myToggleL myCst2 myCst2Name) |||
+            (myToggleL myTile myTileName) |||
+            (myToggleL myOneB myOneBName) |||
+            (myToggleL myMirr myMirrName) |||
+            (myToggleL myMosA myMosAName) |||
+            (myToggleL myCst3 myCst3Name)
+        -- layouts
+        myTile = ResizableTall 1 0.03 0.5 []
+        myMirr = Mirror myTile
+        myMosA = MosaicAlt M.empty
+        myOneB = OneBig 0.75 0.65
+        myCst1 = (layoutN 2 (relBox 0 0 1 0.6) (Just $ relBox 0 0 1 1) $ myTile) $ (layoutAll (relBox 0 0.6 1 1) $ myTabb)
+        myCst2 = (layoutN 1 (relBox 0 0 0.4 1) (Just $ relBox 0 0 1 1) $ myTile) $ (layoutAll (relBox 0.4 0 1 1) $ myTabb)
+        myCst3 = (layoutN 1 (relBox 0 0 1 0.7) (Just $ relBox 0 0 1 1) $ myTabb) $ (layoutAll (relBox 0 0.7 1 1) $ myTabb)
+        myTabb = tabbed shrinkText myTitleTheme
+        -- custom dragging visualizer toggle
+        myToggleL 1 n = smartBorders $ toggleLayouts (named ("Switcher " ++ n) $ switcher 1) (named ("Normal " ++ n) 1) where
+            switcher 1 = windowSwitcherDecoration shrinkText myTitleTheme $ draggingVisualizer 1
+
+-- Manage hook config
+myManageHook :: ManageHook
+myManageHook =
+    manageDocks <+>
+    (scratchpadManageHook $ W.RationalRect 0 0 1 (3 / 4)) <+>
+    dynamicMasterHook <+>
+    manageWindows
+
+-- Manage windows
+manageWindows :: ManageHook
+manageWindows = composeAll . concat $
+    [
+    [ resource =? r --> doIgnore | r <- myIgnores ],
+    [ className =? c --> doShift (myWorkspaces !! 1) | c <- myWebS ],
+    [ className =? c --> doShift (myWorkspaces !! 2) | c <- myCodeS ],
+    [ className =? c --> doShift (myWorkspaces !! 3) | c <- myGfxS ],
+    [ className =? c --> doShift (myWorkspaces !! 4) | c <- myChatS ],
+    [ className =? c --> doShift (myWorkspaces !! 9) | c <- myAlt3S ],
+    [ className =? c --> doCenterFloat | c <- myFloatCC ],
+    [ name =? n --> doCenterFloat | n <- myFloatCN ],
+    [ name =? n --> doSideFloat NW | n <- myFloatSN ],
+    [ className =? c --> doF W.focusDown | n <- myFocusDC ],
+    [ currentWs =? (myWorkspaces !! 1) --> keepMaster "Chrome" ],
+    [ isFullscreen --> doFullFloat ]
+    ] where
+        name = stringProperty "WM_NAME"
+        myIgnores = ["desktop", "desktop_window"]
+        myWebS = ["Chrome"]
+        myCodeS = [""]
+        myGfxS = ["Gimp", "gimp", "GIMP"]
+        myAlt3S = ["Transmission-gtk"]
+        myFloatCC = ["File-roller", "XClock"]
+        myFloatCN = ["Choose a file", "Open Image", "File Operation Progress",
+            "Preferences", "Search Engines", "Rename File", "Copying files",
+            "Moving files", "File properties", "Replace", "Quit GIMP",
+            "Change Foreground Color", "Change Background Color", ""]
+        myFloatSN = ["Event Tester"]
+        myFocusDC = ["Event Tester", "Notify-osd"]
+        keepMaster c = assertSlave <+> assertMaster where
+            assertSlave = fmap (/ = c) className --> doF W.swapDown
+            assertMaster = className =? c --> doF W.swapMaster
+
+-- Dzen status bar config
+-- Urgency hook
+myUrgencyHook :: LayoutClass 1 Window => XConfig 1 -> XConfig 1
 myUrgencyHook = withUrgencyHook dzenUrgencyHook
     {
-    args = ["-x", "0", "-y", "600", "-h", "16", "-w", "1024", "-ta", "r", "-expand", "l", "-fg", "" ++ myUrgentFGColor ++ "", "-bg", "" ++ myNormalBGColor ++ "", "-fn", "" ++ myFont ++ ""]
+    duration = 2000000,
+    args =
+        [
+        "-x", "0",
+        "-y", "0",
+        "-h", show panelHeight,
+        "-w", show topPanelSepPos,
+        "-fn", dzenFont,
+        "-bg", colorBlack,
+        "-fg", colorGreen
+        ]
     }
 
--- Layouts:
-myLayout = avoidStruts $ layoutHints $ onWorkspace "1" (resizableTile ||| Mirror resizableTile) $ onWorkspace "6" gimpLayout $ smartBorders (Full ||| resizableTile ||| Mirror resizableTile)
-    where
-    resizableTile = ResizableTall nmaster delta ratio []
-    tabbedLayout = tabbedBottomAlways shrinkText myTheme
-    gimpLayout = combineTwoP (TwoPane 0.04 0.82) (tabbedLayout) (Full) (Not (Role "gimp-toolbox"))
-    nmaster = 1
-    ratio = toRational (2 / (1 + sqrt(5) :: Double))
-    delta = 3 / 100
+-- Dzen top left bar flags
+dzenTopLeftFlags :: Res -> DF
+dzenTopLeftFlags _ = DF
+    {
+    xPosDF = 0,
+    yPosDF = 0,
+    widthDF = topPanelSepPos,
+    heightDF = panelHeight,
+    alignmentDF = "1",
+    fgColorDF = colorWhiteAlt,
+    bgColorDF = colorBlack,
+    fontDF = dzenFont,
+    eventDF = "onstart=lower",
+    extrasDF = "-p"
+    }
 
-myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
-    [
-    ((modm .|. shiftMask, xK_Return), spawn $ XMonad.terminal conf),
+-- Top left bar loghook
+myTopLeftLogHook :: Handle -> X ()
+myTopLeftLogHook h = dynamicLogWithPP defaultPP
+    {
+    ppOutput = hPutStrLn h,
+    ppOrder = \(_:_:_:x) -> x,
+    ppSep = " ",
+    ppExtras = [ myLayoutL, myWorkspaceL, myFocusL ]
+    }
 
-    -- launch dmenu
-    --((modm, xK_p), spawn "dmenu_run"),
+-- Dzen top right bar flags
+dzenTopRightFlags :: Res -> DF
+dzenTopRightFlags r = DF
+    {
+    xPosDF = topPanelSepPos,
+    yPosDF = 0,
+    widthDF = (xRes r) - topPanelSepPos,
+    heightDF = panelHeight,
+    alignmentDF = "r",
+    fgColorDF = colorWhiteAlt,
+    bgColorDF = colorBlack,
+    fontDF = dzenFont,
+    eventDF = "onstart=lower",
+    extrasDF = "-p"
+    }
 
-    -- close focused window
-    ((modm .|. shiftMask, xK_c), kill),
+-- Top right bar log hook
+myTopRightLogHook :: Handle -> X ()
+myTopRightLogHook h = dynamicLogWithPP defaultPP
+    {
+    ppOutput = hPutStrLn h,
+    ppOrder = \(_:_:_:x) -> x,
+    ppSep = " ",
+    ppExtras = [ myUptimeL, myDateL ]
+    }
 
-    -- Rotate through the available layout algorithms
-    ((modm, xK_space), sendMessage NextLayout),
+-- Dzen bottom left bar flags
+dzenBotLeftFlags :: Res -> DF
+dzenBotLeftFlags r = DF
+    {
+    xPosDF = 0,
+    yPosDF = (yRes r) - panelHeight,
+    widthDF = botPanelSepPos,
+    heightDF = panelHeight,
+    alignmentDF = "1",
+    fgColorDF = colorWhiteAlt,
+    bgColorDF = colorBlack,
+    fontDF = dzenFont,
+    eventDF = "onstart=lower",
+    extrasDF = "-p"
+    }
 
-    --  Reset the layouts on the current workspace to default
-    ((modm .|. shiftMask, xK_space), setLayout $ XMonad.layoutHook conf),
+-- Bottom left bar log hook
+myBotLeftLogHook :: Handle -> X ()
+myBotLeftLogHook h = dynamicLogWithPP . namedScratchpadFilterOutWorkspacePP $ defaultPP
+    {
+    ppOutput = hPutStrLn h,
+    ppOrder = \(ws:_:_:x) -> [ ws ] ++ x
+    ppSep = " ",
+    ppWsSep = "",
+    ppCurrent = dzenBoxStyle blue2BBoxPP
+    ppUrgent = dzenBoxStyle green2BBoxPP . dzenClickWorkspace
+    ppVisible = dzenBoxStyle blackBoxPP . dzenClickWorkspace
+    ppHiddenNoWindows = dzenBoxStyle blackBoxPP . dzenClickWorkspace
+    ppHidden = dzenBoxStyle whiteBoxPP . dzenClickWorkspace
+    ppExtras = [ myResL, myBrightL ]
+    } where
+        dzenClickWorkspace ws = "^ca(1," ++ xdo "w;" ++ xdo index ++ ")" ++ "^ca(3," ++ xdo "w;" ++ xdo index ++ ")" ++ ws ++ "^ca()^ca()" where
+            wsIdxToString Nothing = "1"
+            wsIdxToString (Just n) = show $ mod (n + 1) $ length myWorkspaces
+            index = wsIdxToString (elemIndex ws myWorkspaces)
+            xdo key = "xdotool key super+" ++ key
 
-    -- Move focus to the next window
-    ((modm, xK_j), windows W.focusDown),
+-- Dzen bottom right bar flags
+dzenBotRightFlags :: Res -> DF
+dzenBotRightFlags r = DF
+    {
+    xPosDF = botPanelSepPos,
+    yPosDF = (yRes r) - panelHeight,
+    widthDF = (xRes r) - botPanelSepPos,
+    heightDF = panelHeight,
+    alignmentDF = "r",
+    fgColorDF = colorBlue,
+    bgColorDF = colorBlack,
+    fontDF = dzenFont,
+    eventDF = "onstart=lower",
+    extrasDF = "-p"
+    }
 
-    -- Move focus to the previous window
-    ((modm, xK_k), windows W.focusUp),
+-- Bottom right bar log hook
+myBotRightLogHook :: Handle -> X ()
+myBotRightLogHook h = dynamicLogWithPP defaultPP
+    {
+    ppOutput = hPutStrLn h,
+    ppOrder = \(_:_:_:x) -> x,
+    ppSep = " ",
+    ppExtras = [ myCpuL, myMemL, myTempL, myWifiL, myBatL ]
+    }
 
-    -- Move focus to the master window
-    ((modm, xK_m), windows W.focusMaster),
+-- Loggers config
+-- Bottom right loggers
+myBatL =
+    (dzenBoxStyleL gray2BoxPP $ labelL "BATTERY") ++!
+    (dzenBoxStyleL blueBoxPP $ batPercent 30 colorRed) ++!
+    (dzenBoxStyleL whiteBoxPP batStatus)
 
-    -- Swap the focused window and the master window
-    ((modm, xK_Return), windows W.swapMaster),
+myWifiL =
+    (dzenBoxStyleL gray2BoxPP $ labelL "WIFI") ++!
+    (dzenBoxStyleL blueBoxPP wifiSignal)
 
-    -- Swap the focused window with the next window
-    ((modm .|. shiftMask, xK_j), windows W.swapDown),
+myTempL =
+    (dzenBoxStyleL gray2BoxPP $ labelL "TEMP") ++!
+    (dzenBoxStyleL blueBoxPP $ cpuTemp 2 colorRed)
 
-    -- Swap the focused window with the previous window
-    ((modm .|. shiftMask, xK_k), windows W.swapUp),
+myMemL =
+    (dzenBoxStyleL gray2BoxPP $ labelL "MEM") ++!
+    (dzenBoxStyleL blueBoxPP $ memUsage [ percMemUsage, totMBMemUsage ])
 
-    -- Shrink the master area
-    ((modm, xK_h), sendMessage Shrink),
+-- Bottom left loggers
+myResL =
+    (dzenBoxStyleL blue2BoxPP $ labelL "RES") ++!
+    (dzenBoxStyleL whiteBoxPP $ screenRes ":0" 0)
 
-    -- Expand the master area
-    ((modm, xK_l), sendMessage Expand),
+myBrightL =
+    (dzenBoxStyleL blue2BoxPP $ labelL "BRIGHT") ++!
+    (dzenBoxStyleL whiteBoxPP $ brightPerc 10)
 
-    -- Push window back into tiling
-    ((modm, xK_t), withFocused $ windows . W.sink),
+-- Top right loggers
+myDateL =
+    (dzenBoxStyleL white2BBoxPP $ date "%A") ++!
+    (dzenBoxStyleL whiteBoxPP $ date $ "%Y^fg(" ++ colorGray ++ ").^fg()%m^fg(" ++ colorGray ++ ").^fg()^fg(" ++ colorBlue ++ ")%d^fg()") ++!
+    (dzenBoxStyleL whiteBoxPP $ date $ "%H^fg(" ++ colorGray ++ "):^fg()%M^fg(" ++ colorGray ++ "):^fg()^fg(" ++ colorBlue ++ ")%S^fg()") ++!
+    (dzenClickStyleL calendarCA $ dzenBoxStyleL blueBoxPP $ labelL "CALENDAR")
 
-    -- Increment the number of windows in the master area
-    ((modm, xK_comma), sendMessage (IncMasterN 1)),
+myUptimeL =
+    (dzenBoxStyleL blue2BoxPP $ labelL "UPTIME") ++!
+    (dzenBoxStyleL whiteBoxPP uptime)
 
-    -- Deincrement the number of windows in the master area
-    ((modm, xK_period), sendMessage (IncMasterN (-1))),
-
-    -- Quit xmonad
-    ((modm .|. shiftMask, xK_q), io (exitWith ExitSuccess)),
-
-    -- Restart xmonad
-    ((modm, xK_q), spawn "xmonad --recompile; xmonad --restart")
-    ]
-
-    ++
-
-    [
-    -- mod-[1..9], Switch to workspace N
-    -- mod-shift-[1..9], Move client to workspace N
-    ((m .|. modm, k), windows $ f i)
-        | (i, k) <- zip (XMonad.workspaces conf) [xK_1 .. xK_9]
-        , (f, m) <- [(W.greedyView, 0), (W.shift, shiftMask)]
-    ]
-
-    ++
-
-    [
-    -- mod-{w,e,r}, Switch to physical/Xinerama screens 1, 2, or 3
-    -- mod-shift-{w,e,r}, Move client to screen 1, 2, or 3
-    ((m .|. modm, key), screenWorkspace sc >>= flip whenJust (windows . f))
-        | (key, sc) <- zip [xK_w, xK_e, xK_r] [0..]
-        , (f, m) <- [(W.view, 0), (W.shift, shiftMask)]
-    ]
-
-myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
-    [
-    -- mod-button1, Set the window to floating mode and move by dragging
-    ((modm, button1), (\w -> focus w >> mouseMoveWindow w >> windows W.shiftMaster)),
-
-    -- mod-button3, Set the window to floating mode and resize by dragging
-    ((modm, button3), (\w -> focus w >> mouseResizeWindow w >> windows W.shiftMaster))
-    ]
+-- Top left loggers
