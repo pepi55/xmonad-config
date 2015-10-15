@@ -668,3 +668,123 @@ myUptimeL =
     (dzenBoxStyleL whiteBoxPP uptime)
 
 -- Top left loggers
+myFocusL =
+    (dzenClickStyleL focusCA $ dzenBoxStyleL white2BBoxPP $ labelL "FOCUS") ++!
+    (dzenBoxStyleL whiteBoxPP $ shortenL 100 logTitle)
+
+myLayoutL =
+    (dzenClickStyleL layoutCA $ dzenBoxStyleL blue2BoxPP $ labelL "LAYOUT") ++!
+    (dzenBoxStyleL whiteBoxPP $ onLogger (layoutText . removeWord . removeWord) logLayout) where
+        removeWord xs = tail $ dropWhile (/= ' ') xs
+        layoutText xs
+            | isPrefixOf "Mirror" xs = layoutText $ removeWord xs ++ "^fg(" ++ colorBlue ++ ")M^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
+            | isPrefixOf "ReflectY" xs = layoutText $ removeWord xs ++ "^fg(" ++ colorBlue ++ ")Y^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
+            | isPrefixOf "ReflectX" xs = layoutText $ removeWord xs ++ "^fg(" ++ colorBlue ++ ")X^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
+            | isPrefixOf "Switcher" xs = layoutText $ removeWord xs ++ "^fg(" ++ colorRed ++ ")S^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
+            | isPrefixOf "Normal" xs = layoutText $ removeWord xs ++ "^fg(" ++ colorGreen ++ ")N^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
+            | isPrefixOf "Unique" xs = layoutText $ removeWord xs ++ "^fg(" ++ colorGreen ++ ")U^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
+            | otherwise = concat $ reverse $ words xs
+
+myWorkspaceL =
+    (dzenClickStyleL workspaceCA $ dzenBoxStyleL blue2BoxPP $ labelL "WORKSPACE") ++!
+    (dzenBoxStyleL whiteBoxPP $ onLogger namedWorkspaces logCurrent) where
+        namedWorkspaces w
+            | (elem w $ map show [ 0 .. 9 ]) = "^fg(" ++ colorGreen ++ ")" ++ w ++ "^fg(" ++ colorGray ++ ")|^fg()" ++ workSpaceNames !! (mod ((read w::Int) - 1) 10)
+            | otherwise = "^fg(" ++ colorRed ++ ")x^fg(" ++ colorGray ++ ")|^fg()" ++ w
+
+-- Bindings config
+-- Key bindings
+myKeys :: XConfig Layout -> M.Map (KeyMask, KeySym) (X ())
+myKeys conf@(XConfig { XMonad.modMask = modMask }) = M.fromList $
+    -- xmonad bindings
+    [
+    ((modMask .|. shiftMask, xK_q), killAndExit),
+    ((modMask, xK_q), killAndRestart),
+    ((mod1Mask, xK_F2), shellPrompt myXPConfig),
+    ((modMask, xK_F2), xmonadPrompt myXPConfig),
+    --((mod1Mask, xK_F3), manPrompt myXPConfig),
+    ((modMask, xK_g), goToSelected $ myGSConfig myColorizer),
+    ((modMask, xK_masculine), scratchPad),
+    ((modMask .|. shiftMask, xK_Return), spawn $ XMonad.terminal conf),
+
+    -- window management bindings
+    ((modMask, xK_c), kill),
+    ((modMask, xK_r), refresh),
+    ((modMask, xK_j), windows W.focusDown), -- focus next
+    ((modMask, xK_k), windows W.focusUp), -- focus prev
+    ((modMask, xK_m), windows W.focusMaster), -- focus master
+    ((modMask .|. shiftMask, xK_j), windows W.swapDown), -- swap next
+    ((modMask .|. shiftMask, xK_k), windows W.swapUp), -- swap prev
+    ((modMask .|. shiftMask, xK_m), windows W.swapMaster), -- swap master
+    ((modMask, xK_h), sendMessage Shrink), -- shrink master
+    ((modMask, xK_l), sendMessage Expand), -- expand master
+    ((modMask .|. shiftMask, xK_h), sendMessage MirrorShrink), -- mirror shrink master
+    ((modMask .|. shiftMask, xK_l), sendMessage MirrorExpand), -- mirror expand master
+    ((modMask, xK_t), withFocused $ windows . W.sink), -- tile window
+    ((modMask .|. shiftMask, xK_t), rectFloatFocused), -- float window
+    ((modMask, xK_comma), sendMessage (IncMasterN 1)), -- increment master area
+    ((modMask, xK_period), sendMessage (IncMasterN (-1))), -- decrement master area
+
+    -- layout management bindings
+    ((modMask, xK_space), sendMessage NextLayout),
+    ((modMask, xK_v), sendMessage ToggleLayout),
+    ((modMask .|. shiftMask, xK_space), flashText myTextConfig 1 " set to Default Layout " >> (setLayout $ XMonad.layoutHook conf)),
+    ((modMask, xK_f), sendMessage $ XMonad.Layout.MultiToggle.Toggle TABBED),
+    ((modMask .|. controlMask, xK_f), sendMessage $ XMonad.Layout.MultiToggle.Toggle FLOATED),
+    ((modMask .|. shiftMask, xK_x), sendMessage $ XMonad.Layout.MultiToggle.Toggle REFLECTX),
+    ((modMask .|. shiftMask, xK_y), sendMessage $ XMonad.Layout.MultiToggle.Toggle REFLECTY),
+    ((modMask .|. shiftMask, xK_z), sendMessage $ XMonad.Layout.MultiToggle.Toggle MIRROR)
+    ]
+
+-- Mouse bindings
+myMouseBindings :: XConfig Layout -> M.Map (KeyMask, Button) (Window -> X ())
+myMouseBindings (XConfig { XMonad.modMask = modMask }) = M.fromList $
+    [
+    ((modMask, button1), (\w -> focus w >> mouseMoveWindow w >> windows W.shiftMaster)),
+    ((modMask, button2), (\w -> focus w >> windows W.shiftMaster)),
+    ((modMask, button3), (\w -> focus w >> Flex.mouseResizeWindow w)),
+    ((modMask, button4), (\_ -> prevWS)),
+    ((modMask, button5), (\_ -> nextWS)),
+    ((modMask .|. shiftMask, button4), (\_ -> shiftToPrev)),
+    ((modMask .|. shiftMask, button5), (\_ -> shiftToNext))
+    ]
+
+-- Dzen utils
+-- Dzen flags
+data DF = DF
+    {
+    xPosDF :: Int,
+    yPosDF :: Int,
+    widthDF :: Int,
+    heightDF :: Int,
+    alignmentDF :: String,
+    fgColorDF :: String,
+    bgColorDF :: String,
+    fontDF :: String,
+    eventDF :: String,
+    extrasDF :: String
+    }
+
+-- Dzen box pretty config
+data BoxPP = BoxPP
+    {
+    bgColorBPP :: String,
+    fgColorBPP :: String,
+    fgColorBPP :: String,
+    boxColorBPP :: String,
+    leftIconBPP :: String,
+    rightIconBPP :: String,
+    boxHeightBPP :: String
+    }
+
+-- Dzen clickable area config
+data CA = CA
+    {
+    leftClickCA :: String,
+    middleClickCA :: String,
+    rightClickCA :: String,
+    wheelUpCA :: String,
+    wheeldownCA :: String
+    }
+
+-- Create a dzen string with its flags
