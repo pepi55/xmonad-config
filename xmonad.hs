@@ -788,3 +788,41 @@ data CA = CA
     }
 
 -- Create a dzen string with its flags
+dzenBoxStyle :: BoxPP -> String -> String
+dzenBoxStyle bpp t =
+        "^fg(" ++ (boxColorBPP bpp) ++
+        ")^i(" ++ (leftIconBPP bpp) ++
+        ")^fg(" ++ (bgColorBPP bpp) ++
+        ")^r(1024x" ++ (show $ boxHeightBPP bpp) ++
+        ")^p(-1024)^fg()^ib(0)"
+
+-- Uses dzen format to make dzen text clickable
+dzenClickStyle :: BoxPP -> String -> String
+dzenClickStyle ca t =
+    "^ca(1, " ++ leftClickCA ca ++
+    "^ca((2, " ++ middleClickCA ca ++
+    "^ca(3, " ++ rightClickCA ca ++
+    "^ca(4, " ++ wheelUpCA ca ++
+    "^ca(5, " ++ wheelDownCA ca ++
+    ")" ++ t ++
+    "^ca()^ca()^ca()^ca()^ca()"
+
+-- Launch dzen through the system shell and return a handle to its standard input
+dzenSpawnPipe df = spawnPipe $ "dzen2" ++ dzenFlagsToStr df
+
+-- Logger version of dzenBoxStyle
+dzenBoxStyleL :: BoxPP -> Logger -> Logger
+dzenBoxStyleL bpp l = (fmap . fmap) (dzenBoxStyle bpp) l
+
+-- Logger version of dzenClickStyle
+dzenClickStyleL :: CA -> Logger -> Logger
+dzenClickStyleL ca l = (fmap . fmap) (dzenClickStyle ca) l
+
+-- Loggers
+-- Concat 2 loggers
+(++!) :: Logger -> Logger -> Logger
+l1 ++! l2 = (liftA2 . liftA2) (++) l1 l2
+
+-- Label
+labelL :: String -> Logger
+labelL = return . return
