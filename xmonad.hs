@@ -375,6 +375,9 @@ myFloaName = "Float"
 myStartupHook =
     (setDefaultCursor xC_left_ptr) <+>
     (spawn "feh --bg-scale ~/Pictures/background.jpg") <+>
+    (spawn "killall haskell-cpu-usage.out") <+>
+    (liftIO $ threadDelay 1000000) <+>
+    (spawn "~/.xmonad/apps/haskell-cpu-usage.out 5") <+>
     (startTimer 1 >>= XS.put . TID)
 
 -- Event hook config
@@ -647,6 +650,10 @@ myMemL =
     (dzenBoxStyleL gray2BoxPP $ labelL "MEM") ++!
     (dzenBoxStyleL blueBoxPP $ memUsage [ percMemUsage, totMBMemUsage ])
 
+myCpuL =
+    (dzenBoxStyleL gray2BoxPP $ labelL "CPU") ++!
+    (dzenBoxStyleL blueBoxPP $ cpuUsage "/tmp/haskell-cpu-usage.txt" 70 colorRed)
+
 -- Bottom left loggers
 myResL =
     (dzenBoxStyleL blue2BoxPP $ labelL "RES") ++!
@@ -734,7 +741,15 @@ myKeys conf@(XConfig { XMonad.modMask = modMask }) = M.fromList $
     ((modMask .|. shiftMask, xK_x), sendMessage $ XMonad.Layout.MultiToggle.Toggle REFLECTX),
     ((modMask .|. shiftMask, xK_y), sendMessage $ XMonad.Layout.MultiToggle.Toggle REFLECTY),
     ((modMask .|. shiftMask, xK_z), sendMessage $ XMonad.Layout.MultiToggle.Toggle MIRROR)
-    ]
+    ] where
+        scratchPad = scratchPadSpawnActionCustom "urxvt -name scratchpad"
+        killAndExit =
+            (spawn "killall dzen2 haskell-cpu-usage.out") <+>
+            io (exitWith ExitSuccess)
+        killAndRestart =
+            (spawn "killall dzen2 haskell-cpu-usage.out") <+>
+            (liftIO $ threadDelay 1000000) <+>
+            (restart "xmonad" True)
 
 -- Mouse bindings
 myMouseBindings :: XConfig Layout -> M.Map (KeyMask, Button) (Window -> X ())
@@ -826,3 +841,110 @@ l1 ++! l2 = (liftA2 . liftA2) (++) l1 l2
 -- Label
 labelL :: String -> Logger
 labelL = return . return
+
+-- Initialize version for logger
+initL :: Logger -> Logger
+initL = (fmap . fmap) initNotNull
+
+-- Concat list of loggers
+concatL :: [Logger] -> Logger
+concatL [] = return $ return ""
+concatL (x:xs) = x ++! concatL xs
+
+-- Concat a list of loggers with spaces
+concatWithSpaceL :: [Logger] -> Logger
+concatWithSpaceL [] = return $ return ""
+concatWithSpaceL (x:xs) = x ++! (labelL " ") ++! concatWithSpaceL xs
+
+initNotNull :: String -> String
+initNotNull [] = "0\n"
+initNotNull xs = init xs
+
+tailNotNull :: [String] -> [String]
+initNotNull [] = ["0\n"]
+initNotNull xs = tail xs
+
+-- Convert content of file into logger
+fileToLogger :: (String -> String) -> String -> FilePath -> Logger
+fileToLogger f e p = do
+    let readWithE f1 e1 p1 = E.catch (do
+        contents <- readFile p1
+        return $ f1 (initNotNull contents)) ((\_ -> return e1) :: E.SomeException -> IO String)
+    str <- liftIO $ readWithE f e p
+    return $ return str
+
+-- Battery percent
+batPercent :: Int -> String -> Logger
+batPercent v c = fileToLogger format "N/A" "/sys/class/power_supply/BAT0/capacity" where
+    format x = if ((read x::Int) <= v) then "^fg(" ++ c ++ ")" ++ x ++ "$^fg()" else (x ++ "%")
+
+-- Battery status
+batStatus :: Logger
+batStatus = fileToLogger (\x -> x) "AC Connection" "/sys/class/power_supply/BAT0/status"
+
+-- Brightness percent
+brightPerc :: Int -> Logger
+brightPerc p = fileToLogger format "0" "/sys/class/backlight/acpi_video0/actual_brightness" where
+    format x = (show $ div ((read x::Int) * 100) p) ++ "%"
+
+-- Wi-Fi signal
+wifiSignal :: Logger
+wifiSignal = fileToLogger format "N/A" "/proc/net/wireless" where
+    format x = if (length $ lines x) >= 3 then (initNotNull ((words ((lines x) !! 2)) !! 2) ++ "%") else "Off"
+
+-- CPU temperature
+cpuTemp :: Int -> Int -> String -> Logger
+cpuTemp n v c = initL $ concatWithSpaceL $ map (fileToLogger divc "0") pathtemps where
+    pathtemps = map (++ "/thermal_zone/temp") $ map ("/sys/bus/acpi/devices/LNXTHERM:0" ++) $ take n $ map show [0 ..]
+    divc x = crit $ div (read x::Int) 1000
+    crit x = if (x >= v) then "^fg(" ++ c ++ ")" ++ show x ++ "°^fg()" else (show x ++ "°")
+
+-- Memory usage
+memUsage :: [(String -> String)] -> Logger
+memUsage xs = initL $ concatWithSpaceL $ map funct xs where
+    funct x = fileToLogger x "N/A" "/proc/meminfo"
+
+_memUsed x = (_memValues x !! 0) - (_memValues x !! 2)
+_memPerc x = div (_memUsed x * 100) (_memValues x !! 0)
+_memValues x = map (getValues x) $ take 4 [0 ..] where
+    getValues x n = read (words (lines x !! n) !! 1)::Int
+
+freeBMemUsage x = (show $ _memValues x !! 1) ++ "B"
+freeMBMemUsage x = (show $ div (_memValues x !! 1) 1024) ++ "MB"
+totBMemUsage = (++ "B") . show . _memUsed
+totMBMemUsage = (++ "MB") . show . (`div` 1024) . _memUsed
+percMemUsage = (++ "%") . show . _memPerc
+
+-- CPU usage
+cpuUsage :: String -> Int -> String -> Logger
+cpuUsage path v c = fileToLogger format "0" path where
+    format x = if (null x) then "N/A" else initNotNull $ concat $ map (++ " ") $ map crit $ tailNotNull $ words $ x
+    crit x = if ((read x::Int) >= v) then "^fg(" ++ c ++ ")" ++ x ++ "%^fg()" else (x ++ "%")
+
+-- Uptime
+uptime :: Logger
+uptime = fileToLogger format "0" "/proc/uptime" where
+    u x = read (takeWhile (/=' . ') x)::Integer
+    h x = div (u x) 3600
+    hr x = mod (u x) 3600
+    m x = div (hr x) 60
+    s x = mod (hr x) 60
+    format x = (show $ h x) ++ "h" ++ (show $ m x) ++ "m " ++ (show $ s x) ++ "s"
+
+-- Gets current resolution given a display and a screen
+getScreenRes :: String -> Int -> IO Res
+getScreenRes d n = do
+    dpy <- openDisplay d
+    r <- liftIO $ getScreenInfo dpy
+    closeDisplay dpy
+    return $ Res
+        {
+        xRes = fromIntegral $ rect_width $ r !! n,
+        yRes = fromIntegral $ rect_height $ r !! n
+        }
+
+-- Screen resolution
+screenRes :: String -> Int -> Logger
+screenRes d n = do
+    res <- liftIO $ getScreenRes d n
+    return $ return $ (show $ xRes res) ++ "x" ++ (show $ yRes res)
