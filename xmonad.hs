@@ -3,6 +3,7 @@
 -- Desc : My modified XMonad config
 
 -- Options
+{-# OPTIONS_GHC -fcontext-stack=32 #-}
 {-# LANGUAGE DeriveDataTypeable, NoMonomorphismRestriction, MultiParamTypeClasses, ImplicitParams #-}
 
 -- Modules
@@ -27,7 +28,7 @@ import XMonad.Layout.Maximize
 import XMonad.Layout.ToggleLayouts
 import XMonad.Layout.MagicFocus
 import XMonad.Layout.WindowNavigation
-import XMonad.Layout.WindowSwitcherNavigation
+import XMonad.Layout.WindowSwitcherDecoration
 import XMonad.Layout.DraggingVisualizer
 import XMonad.Layout.LayoutBuilder
 import XMonad.Hooks.DynamicLog
@@ -68,7 +69,7 @@ import Control.Exception as E
 
 import qualified XMonad.Actions.FlexibleResize as Flex
 import qualified XMonad.Util.ExtensibleState as XS
-import qualified XMonad.Stackset as W
+import qualified XMonad.StackSet as W
 import qualified Data.Map as M
 
 myTerminal = "/usr/bin/urxvt"
@@ -88,14 +89,14 @@ main = do
         {
         terminal = myTerminal,
         modMask = myModMask,
-        focusFollowsMouse = myFocusFollowsMouse
+        focusFollowsMouse = myFocusFollowsMouse,
         borderWidth = myBorderWidth,
         normalBorderColor = colorBlackAlt,
         focusedBorderColor = colorWhiteAlt2,
         workspaces = myWorkspaces,
 
         startupHook = myStartupHook,
-        handleHookEvent = myEventHook,
+        handleEventHook = myHandleEventHook,
         layoutHook = myLayoutHook,
         manageHook = myManageHook,
 
@@ -108,7 +109,7 @@ main = do
             setWMName "LG3D",
 
         keys = myKeys,
-        mouseBindings = myMouseBindings,
+        mouseBindings = myMouseBindings
         }
 
 -- Look and feel
@@ -218,7 +219,7 @@ gray2BoxPP = BoxPP
     boxColorBPP = colorGrayAlt,
     leftIconBPP = boxLeftIcon2,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = boxHeight
+    boxHeightBPP = show boxHeight
     }
 
 blueBoxPP :: BoxPP
@@ -229,7 +230,7 @@ blueBoxPP = BoxPP
     boxColorBPP = colorGrayAlt,
     leftIconBPP = boxLeftIcon,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = boxHeight
+    boxHeightBPP = show boxHeight
     }
 
 blue2BoxPP :: BoxPP
@@ -240,7 +241,7 @@ blue2BoxPP = BoxPP
     boxColorBPP = colorGrayAlt,
     leftIconBPP = boxLeftIcon2,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = boxHeight
+    boxHeightBPP = show boxHeight
     }
 
 blackBoxPP :: BoxPP
@@ -251,7 +252,7 @@ blackBoxPP = BoxPP
     boxColorBPP = colorGrayAlt,
     leftIconBPP = boxLeftIcon,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = boxHeight
+    boxHeightBPP = show boxHeight
     }
 
 whiteBoxPP :: BoxPP
@@ -262,7 +263,7 @@ whiteBoxPP = BoxPP
     boxColorBPP = colorGrayAlt,
     leftIconBPP = boxLeftIcon,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = boxHeight
+    boxHeightBPP = show boxHeight
     }
 
 white2BBoxPP :: BoxPP
@@ -273,7 +274,7 @@ white2BBoxPP = BoxPP
     boxColorBPP = colorWhiteAlt,
     leftIconBPP = boxLeftIcon2,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = boxHeight
+    boxHeightBPP = show boxHeight
     }
 
 blue2BBoxPP :: BoxPP -- Current workspace
@@ -284,7 +285,7 @@ blue2BBoxPP = BoxPP
     boxColorBPP = colorBlue,
     leftIconBPP = boxLeftIcon2,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = boxHeight
+    boxHeightBPP = show boxHeight
     }
 
 green2BBoxPP :: BoxPP -- Urgent workspace
@@ -295,47 +296,47 @@ green2BBoxPP = BoxPP
     boxColorBPP = colorGreen,
     leftIconBPP = boxLeftIcon2,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = boxHeight
+    boxHeightBPP = show boxHeight
     }
 
 -- Dzen logger clickable areas
 calendarCA :: CA
 calendarCA = CA
     {
-    leftClickCA = "~/.xmonad/dzencal.sh"
-    middleClickCA = "~/.xmonad/dzencal.sh"
-    rightClickCA = "~/.xmonad/dzencal.sh"
-    wheelUpCA = "~/.xmonad/dzencal.sh"
-    wheelDownCA = "~/.xmonad/dzencal.sh"
+    leftClickCA = "~/.xmonad/apps/dzencal.sh",
+    middleClickCA = "~/.xmonad/apps/dzencal.sh",
+    rightClickCA = "~/.xmonad/apps/dzencal.sh",
+    wheelUpCA = "~/.xmonad/apps/dzencal.sh",
+    wheelDownCA = "~/.xmonad/apps/dzencal.sh"
     }
 
 layoutCA :: CA
 layoutCA = CA
     {
-    leftClickCA = "xdotool key super+space"
-    middleClickCA = "xdotool key super+v"
-    rightClickCA = "xdotool key super+shift+space"
-    wheelUpCA = "xdotool key super+f"
+    leftClickCA = "xdotool key super+space",
+    middleClickCA = "xdotool key super+v",
+    rightClickCA = "xdotool key super+shift+space",
+    wheelUpCA = "xdotool key super+f",
     wheelDownCA = "xdotool key super+control+f"
     }
 
 workspaceCA :: CA
 workspaceCA = CA
     {
-    leftClickCA = "xdotool key super+1"
-    middleClickCA = "xdotool key super+g"
-    rightClickCA = "xdotool key super+0"
-    wheelUpCA = "xdotool key ctrl+alt+Right"
+    leftClickCA = "xdotool key super+1",
+    middleClickCA = "xdotool key super+g",
+    rightClickCA = "xdotool key super+0",
+    wheelUpCA = "xdotool key ctrl+alt+Right",
     wheelDownCA = "xdotool key ctrl+alt+Left"
     }
 
 focusCA :: CA
 focusCA = CA
     {
-    leftClickCA = "xdotool key super+m"
-    middleClickCA = "xdotool key super+c"
-    rightClickCA = "xdotool key super+shift+m"
-    wheelUpCA = "xdotool key super+shift+j"
+    leftClickCA = "xdotool key super+m",
+    middleClickCA = "xdotool key super+c",
+    rightClickCA = "xdotool key super+shift+m",
+    wheelUpCA = "xdotool key super+shift+j",
     wheelDownCA = "xdotool key super+shift+k"
     }
 
@@ -356,7 +357,7 @@ workSpaceNames =
     "Other",
     "Other",
     "Other",
-    "Other",
+    "Other"
     ]
 
 -- Layout names (must be 1 word)
@@ -402,18 +403,18 @@ myHandleEventHook =
                 return Nothing
             return $ All True
         notFocusFloat = followOnlyIf (fmap not isFloat) where
-            isFloat = fmap (isSuffixOf myFloatName) $ gets (description . W.layout . W.workspace . W.current . windowset)
+            isFloat = fmap (isSuffixOf myFloaName) $ gets (description . W.layout . W.workspace . W.current . windowset)
 
 -- Layout config
 -- Tabbed transformer (W+f)
 data TABBED = TABBED deriving (Read, Show, Eq, Typeable)
 instance Transformer TABBED Window where
-    transform TABBED x k = k myFTabU (\_ -> X)
+    transform TABBED x k = k myFTabU (\_ -> x)
 
 -- Floated transformer (W+ctrl+f)
 data FLOATED = FLOATED deriving (Read, Show, Eq, Typeable)
 instance Transformer FLOATED Window where
-    transform FLOATED x k = k myFloaU (\_ -> X)
+    transform FLOATED x k = k myFloaU (\_ -> x)
 
 -- Unique layouts
 myFTabU = smartBorders $ named ("Unique " ++ myFTabName) $ tabbedAlways shrinkText myTitleTheme
@@ -422,7 +423,7 @@ myFloaU = named ("Unique " ++ myFloaName) $ mouseResize $ noFrillsDeco shrinkTex
 -- Layout hook
 myLayoutHook =
     gaps [(U, panelHeight), (D, panelHeight)] $
-    configurableNavigation noNavigationBorders $
+    configurableNavigation noNavigateBorders $
     minimize $
     maximize $
     mkToggle (single TABBED) $
@@ -453,8 +454,8 @@ myLayoutHook =
         myCst3 = (layoutN 1 (relBox 0 0 1 0.7) (Just $ relBox 0 0 1 1) $ myTabb) $ (layoutAll (relBox 0 0.7 1 1) $ myTabb)
         myTabb = tabbed shrinkText myTitleTheme
         -- custom dragging visualizer toggle
-        myToggleL 1 n = smartBorders $ toggleLayouts (named ("Switcher " ++ n) $ switcher 1) (named ("Normal " ++ n) 1) where
-            switcher 1 = windowSwitcherDecoration shrinkText myTitleTheme $ draggingVisualizer 1
+        myToggleL l n = smartBorders $ toggleLayouts (named ("Switcher " ++ n) $ switcher l) (named ("Normal " ++ n) l) where
+            switcher l = windowSwitcherDecoration shrinkText myTitleTheme $ draggingVisualizer l
 
 -- Manage hook config
 myManageHook :: ManageHook
@@ -472,12 +473,12 @@ manageWindows = composeAll . concat $
     [ className =? c --> doShift (myWorkspaces !! 1) | c <- myWebS ],
     [ className =? c --> doShift (myWorkspaces !! 2) | c <- myCodeS ],
     [ className =? c --> doShift (myWorkspaces !! 3) | c <- myGfxS ],
-    [ className =? c --> doShift (myWorkspaces !! 4) | c <- myChatS ],
+    --[ className =? c --> doShift (myWorkspaces !! 4) | c <- myChatS ],
     [ className =? c --> doShift (myWorkspaces !! 9) | c <- myAlt3S ],
     [ className =? c --> doCenterFloat | c <- myFloatCC ],
     [ name =? n --> doCenterFloat | n <- myFloatCN ],
     [ name =? n --> doSideFloat NW | n <- myFloatSN ],
-    [ className =? c --> doF W.focusDown | n <- myFocusDC ],
+    [ className =? c --> doF W.focusDown | c <- myFocusDC ],
     [ currentWs =? (myWorkspaces !! 1) --> keepMaster "Chrome" ],
     [ isFullscreen --> doFullFloat ]
     ] where
@@ -495,12 +496,12 @@ manageWindows = composeAll . concat $
         myFloatSN = ["Event Tester"]
         myFocusDC = ["Event Tester", "Notify-osd"]
         keepMaster c = assertSlave <+> assertMaster where
-            assertSlave = fmap (/ = c) className --> doF W.swapDown
+            assertSlave = fmap (/= c) className --> doF W.swapDown
             assertMaster = className =? c --> doF W.swapMaster
 
 -- Dzen status bar config
 -- Urgency hook
-myUrgencyHook :: LayoutClass 1 Window => XConfig 1 -> XConfig 1
+myUrgencyHook :: LayoutClass l Window => XConfig l -> XConfig l
 myUrgencyHook = withUrgencyHook dzenUrgencyHook
     {
     duration = 2000000,
@@ -508,8 +509,8 @@ myUrgencyHook = withUrgencyHook dzenUrgencyHook
         [
         "-x", "0",
         "-y", "0",
-        "-h", show panelHeight,
-        "-w", show topPanelSepPos,
+        "-h", "16",
+        "-w", "950",
         "-fn", dzenFont,
         "-bg", colorBlack,
         "-fg", colorGreen
@@ -589,14 +590,14 @@ myBotLeftLogHook :: Handle -> X ()
 myBotLeftLogHook h = dynamicLogWithPP . namedScratchpadFilterOutWorkspacePP $ defaultPP
     {
     ppOutput = hPutStrLn h,
-    ppOrder = \(ws:_:_:x) -> [ ws ] ++ x
+    ppOrder = \(ws:_:_:x) -> [ ws ] ++ x,
     ppSep = " ",
     ppWsSep = "",
-    ppCurrent = dzenBoxStyle blue2BBoxPP
-    ppUrgent = dzenBoxStyle green2BBoxPP . dzenClickWorkspace
-    ppVisible = dzenBoxStyle blackBoxPP . dzenClickWorkspace
-    ppHiddenNoWindows = dzenBoxStyle blackBoxPP . dzenClickWorkspace
-    ppHidden = dzenBoxStyle whiteBoxPP . dzenClickWorkspace
+    ppCurrent = dzenBoxStyle blue2BBoxPP,
+    ppUrgent = dzenBoxStyle green2BBoxPP . dzenClickWorkspace,
+    ppVisible = dzenBoxStyle blackBoxPP . dzenClickWorkspace,
+    ppHiddenNoWindows = dzenBoxStyle blackBoxPP . dzenClickWorkspace,
+    ppHidden = dzenBoxStyle whiteBoxPP . dzenClickWorkspace,
     ppExtras = [ myResL, myBrightL ]
     } where
         dzenClickWorkspace ws = "^ca(1," ++ xdo "w;" ++ xdo index ++ ")" ++ "^ca(3," ++ xdo "w;" ++ xdo index ++ ")" ++ ws ++ "^ca()^ca()" where
@@ -644,7 +645,7 @@ myWifiL =
 
 myTempL =
     (dzenBoxStyleL gray2BoxPP $ labelL "TEMP") ++!
-    (dzenBoxStyleL blueBoxPP $ cpuTemp 2 colorRed)
+    (dzenBoxStyleL blueBoxPP $ cpuTemp 2 70 colorRed)
 
 myMemL =
     (dzenBoxStyleL gray2BoxPP $ labelL "MEM") ++!
@@ -742,7 +743,8 @@ myKeys conf@(XConfig { XMonad.modMask = modMask }) = M.fromList $
     ((modMask .|. shiftMask, xK_y), sendMessage $ XMonad.Layout.MultiToggle.Toggle REFLECTY),
     ((modMask .|. shiftMask, xK_z), sendMessage $ XMonad.Layout.MultiToggle.Toggle MIRROR)
     ] where
-        scratchPad = scratchPadSpawnActionCustom "urxvt -name scratchpad"
+        scratchPad = scratchpadSpawnActionCustom "urxvt -name scratchpad"
+        rectFloatFocused = withFocused $ \f -> windows =<< appEndo `fmap` runQuery (doRectFloat $ W.RationalRect 0.05 0.05 0.9 0.9) f
         killAndExit =
             (spawn "killall dzen2 haskell-cpu-usage.out") <+>
             io (exitWith ExitSuccess)
@@ -785,7 +787,6 @@ data BoxPP = BoxPP
     {
     bgColorBPP :: String,
     fgColorBPP :: String,
-    fgColorBPP :: String,
     boxColorBPP :: String,
     leftIconBPP :: String,
     rightIconBPP :: String,
@@ -799,10 +800,24 @@ data CA = CA
     middleClickCA :: String,
     rightClickCA :: String,
     wheelUpCA :: String,
-    wheeldownCA :: String
+    wheelDownCA :: String
     }
 
 -- Create a dzen string with its flags
+dzenFlagsToStr :: DF -> String
+dzenFlagsToStr df =
+    " -x '" ++ (show $ xPosDF df) ++
+    "' -y '" ++ (show $ yPosDF df) ++
+    "' -w '" ++ (show $ widthDF df) ++
+    "' -h '" ++ (show $ heightDF df) ++
+    "' -ta '" ++ alignmentDF df ++
+    "' -fg '" ++ fgColorDF df ++
+    "' -bg '" ++ bgColorDF df ++
+    "' -fn '" ++ fontDF df ++
+    "' -e '" ++ eventDF df ++
+    "' " ++ extrasDF df
+
+-- Uses dzen format to draw a "box" around given txt
 dzenBoxStyle :: BoxPP -> String -> String
 dzenBoxStyle bpp t =
         "^fg(" ++ (boxColorBPP bpp) ++
@@ -812,7 +827,7 @@ dzenBoxStyle bpp t =
         ")^p(-1024)^fg()^ib(0)"
 
 -- Uses dzen format to make dzen text clickable
-dzenClickStyle :: BoxPP -> String -> String
+dzenClickStyle :: CA -> String -> String
 dzenClickStyle ca t =
     "^ca(1, " ++ leftClickCA ca ++
     "^ca((2, " ++ middleClickCA ca ++
@@ -861,8 +876,8 @@ initNotNull [] = "0\n"
 initNotNull xs = init xs
 
 tailNotNull :: [String] -> [String]
-initNotNull [] = ["0\n"]
-initNotNull xs = tail xs
+tailNotNull [] = ["0\n"]
+tailNotNull xs = tail xs
 
 -- Convert content of file into logger
 fileToLogger :: (String -> String) -> String -> FilePath -> Logger
@@ -924,7 +939,7 @@ cpuUsage path v c = fileToLogger format "0" path where
 -- Uptime
 uptime :: Logger
 uptime = fileToLogger format "0" "/proc/uptime" where
-    u x = read (takeWhile (/=' . ') x)::Integer
+    u x = read (takeWhile (/= '.') x)::Integer
     h x = div (u x) 3600
     hr x = mod (u x) 3600
     m x = div (hr x) 60
@@ -944,6 +959,13 @@ getScreenRes d n = do
         }
 
 -- Screen resolution
+data Res = Res
+    {
+    xRes :: Int,
+    yRes :: Int
+    }
+
+-- Screen resolution logger
 screenRes :: String -> Int -> Logger
 screenRes d n = do
     res <- liftIO $ getScreenRes d n
