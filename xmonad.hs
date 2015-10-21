@@ -72,8 +72,7 @@ import qualified XMonad.Util.ExtensibleState as XS
 import qualified XMonad.StackSet as W
 import qualified Data.Map as M
 
-myTerminal = "/usr/bin/urxvt"
-myFocusFollowsMouse = True
+myTerminal = "/usr/bin/urxvtc"
 myBorderWidth = 3
 myModMask = mod4Mask
 
@@ -89,7 +88,8 @@ main = do
         {
         terminal = myTerminal,
         modMask = myModMask,
-        focusFollowsMouse = myFocusFollowsMouse,
+        focusFollowsMouse = True,
+        clickJustFocuses = True,
         borderWidth = myBorderWidth,
         normalBorderColor = colorBlackAlt,
         focusedBorderColor = colorWhiteAlt2,
@@ -113,40 +113,35 @@ main = do
         }
 
 -- Look and feel
-dzenFont = "-*-montecarlo-medium-r-normal-*-11-*-*-*-*-*-*-*" --"-*-terminus-medium-*-*-*-12-120-75-75-*-*-iso8859-*"
+dzenFont = "-*-terminus-medium-*-*-*-10-120-75-75-*-*-iso8859-*" --XLFD: "-*-montecarlo-medium-r-normal-*-11-*-*-*-*-*-*-*"
+
 colorBlack = "#020202"
 colorBlackAlt = "#1C1C1C"
-
 colorGray = "#444444"
 colorGrayAlt = "#101010"
 colorGrayAlt2 = "#404040"
 colorGrayAlt3 = "#252525"
-
 colorWhite = "#A9A6AF"
 colorWhiteAlt = "#9D9D9D"
 colorWhiteAlt2 = "#B5B3B3"
 colorWhiteAlt3 = "#707070"
-
 colorMagenta = "#8E82A2"
-
 colorBlue = "#44AACC"
 colorBlueAlt = "#3955C4"
-
 colorRed = "#F7A16E"
 colorRedAlt = "#E0105F"
-
 colorGreen = "#66FF66"
 colorGreenAlt = "#558965"
 
-boxLeftIcon = "~/.xmonad/xbm_icons/boxleft.xbm"
-boxLeftIcon2 = "~/.xmonad/xbm_icons/boxleft2.xbm"
-boxRightIcon = "~/.xmonad/xbm_icons/boxright.xbm"
+boxLeftIcon = "/home/pepi/.xmonad/xbm_icons/boxleft.xbm"
+boxLeftIcon2 = "/home/pepi/.xmonad/xbm_icons/boxleft2.xbm"
+boxRightIcon = "/home/pepi/.xmonad/xbm_icons/boxright.xbm"
 
 panelHeight = 16
 boxHeight = 14
 
-topPanelSepPos = 950
-botPanelSepPos = 450
+topPanelSepPos = 620 --950
+botPanelSepPos = 420 -- blaze it
 
 -- Title theme
 myTitleTheme :: Theme
@@ -177,7 +172,7 @@ myXPConfig = defaultXPConfig
     promptBorderWidth = 1,
     height = panelHeight,
     position = Top,
-    historySize = 1000,
+    historySize = 100,
     historyFilter = deleteConsecutive,
     autoComplete = Nothing
     }
@@ -219,7 +214,7 @@ gray2BoxPP = BoxPP
     boxColorBPP = colorGrayAlt,
     leftIconBPP = boxLeftIcon2,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = show boxHeight
+    boxHeightBPP = boxHeight
     }
 
 blueBoxPP :: BoxPP
@@ -230,7 +225,7 @@ blueBoxPP = BoxPP
     boxColorBPP = colorGrayAlt,
     leftIconBPP = boxLeftIcon,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = show boxHeight
+    boxHeightBPP = boxHeight
     }
 
 blue2BoxPP :: BoxPP
@@ -241,7 +236,7 @@ blue2BoxPP = BoxPP
     boxColorBPP = colorGrayAlt,
     leftIconBPP = boxLeftIcon2,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = show boxHeight
+    boxHeightBPP = boxHeight
     }
 
 blackBoxPP :: BoxPP
@@ -252,7 +247,7 @@ blackBoxPP = BoxPP
     boxColorBPP = colorGrayAlt,
     leftIconBPP = boxLeftIcon,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = show boxHeight
+    boxHeightBPP = boxHeight
     }
 
 whiteBoxPP :: BoxPP
@@ -263,7 +258,7 @@ whiteBoxPP = BoxPP
     boxColorBPP = colorGrayAlt,
     leftIconBPP = boxLeftIcon,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = show boxHeight
+    boxHeightBPP = boxHeight
     }
 
 white2BBoxPP :: BoxPP
@@ -274,7 +269,7 @@ white2BBoxPP = BoxPP
     boxColorBPP = colorWhiteAlt,
     leftIconBPP = boxLeftIcon2,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = show boxHeight
+    boxHeightBPP = boxHeight
     }
 
 blue2BBoxPP :: BoxPP -- Current workspace
@@ -285,7 +280,7 @@ blue2BBoxPP = BoxPP
     boxColorBPP = colorBlue,
     leftIconBPP = boxLeftIcon2,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = show boxHeight
+    boxHeightBPP = boxHeight
     }
 
 green2BBoxPP :: BoxPP -- Urgent workspace
@@ -296,7 +291,7 @@ green2BBoxPP = BoxPP
     boxColorBPP = colorGreen,
     leftIconBPP = boxLeftIcon2,
     rightIconBPP = boxRightIcon,
-    boxHeightBPP = show boxHeight
+    boxHeightBPP = boxHeight
     }
 
 -- Dzen logger clickable areas
@@ -374,8 +369,9 @@ myFloaName = "Float"
 
 -- Startup hook config
 myStartupHook =
-    (setDefaultCursor xC_left_ptr) <+>
+    (setDefaultCursor xC_pirate) <+> -- xC_left_ptr
     (spawn "feh --bg-scale ~/Pictures/background.jpg") <+>
+    (spawn "urxvtd --quiet --opendisplay --fork") <+>
     (spawn "killall haskell-cpu-usage.out") <+>
     (liftIO $ threadDelay 1000000) <+>
     (spawn "~/.xmonad/apps/haskell-cpu-usage.out 5") <+>
@@ -431,8 +427,8 @@ myLayoutHook =
     mkToggle (single MIRROR) $
     mkToggle (single REFLECTX) $
     mkToggle (single REFLECTY) $
-    onWorkspace (myWorkspaces !! 1) codeLayouts $
-    onWorkspace (myWorkspaces !! 2) webLayouts $
+    onWorkspace (myWorkspaces !! 0) codeLayouts $
+    onWorkspace (myWorkspaces !! 1) webLayouts $
     allLayouts where
         webLayouts = (myToggleL myCst3 myCst3Name) ||| (myToggleL myCst1 myCst1Name)
         codeLayouts = (myToggleL myCst2 myCst2Name) ||| (myToggleL myOneB myOneBName) ||| (myToggleL myTile myTileName)
@@ -471,22 +467,22 @@ manageWindows = composeAll . concat $
     [
     [ resource =? r --> doIgnore | r <- myIgnores ],
     [ className =? c --> doShift (myWorkspaces !! 1) | c <- myWebS ],
-    [ className =? c --> doShift (myWorkspaces !! 2) | c <- myCodeS ],
-    [ className =? c --> doShift (myWorkspaces !! 3) | c <- myGfxS ],
+    [ className =? c --> doShift (myWorkspaces !! 0) | c <- myCodeS ],
+    --[ className =? c --> doShift (myWorkspaces !! 3) | c <- myGfxS ],
     --[ className =? c --> doShift (myWorkspaces !! 4) | c <- myChatS ],
     [ className =? c --> doShift (myWorkspaces !! 9) | c <- myAlt3S ],
     [ className =? c --> doCenterFloat | c <- myFloatCC ],
     [ name =? n --> doCenterFloat | n <- myFloatCN ],
     [ name =? n --> doSideFloat NW | n <- myFloatSN ],
     [ className =? c --> doF W.focusDown | c <- myFocusDC ],
-    [ currentWs =? (myWorkspaces !! 1) --> keepMaster "Chrome" ],
+    [ currentWs =? (myWorkspaces !! 1) --> keepMaster "google-chrome" ],
     [ isFullscreen --> doFullFloat ]
     ] where
         name = stringProperty "WM_NAME"
         myIgnores = ["desktop", "desktop_window"]
-        myWebS = ["Chrome"]
+        myWebS = ["google-chrome"]
         myCodeS = [""]
-        myGfxS = ["Gimp", "gimp", "GIMP"]
+        myGfxS = ["gimp"]
         myAlt3S = ["Transmission-gtk"]
         myFloatCC = ["File-roller", "XClock"]
         myFloatCN = ["Choose a file", "Open Image", "File Operation Progress",
@@ -509,8 +505,8 @@ myUrgencyHook = withUrgencyHook dzenUrgencyHook
         [
         "-x", "0",
         "-y", "0",
-        "-h", "16",
-        "-w", "950",
+        "-h", show panelHeight,
+        "-w", show topPanelSepPos,
         "-fn", dzenFont,
         "-bg", colorBlack,
         "-fg", colorGreen
@@ -525,7 +521,7 @@ dzenTopLeftFlags _ = DF
     yPosDF = 0,
     widthDF = topPanelSepPos,
     heightDF = panelHeight,
-    alignmentDF = "1",
+    alignmentDF = "l",
     fgColorDF = colorWhiteAlt,
     bgColorDF = colorBlack,
     fontDF = dzenFont,
@@ -577,7 +573,7 @@ dzenBotLeftFlags r = DF
     yPosDF = (yRes r) - panelHeight,
     widthDF = botPanelSepPos,
     heightDF = panelHeight,
-    alignmentDF = "1",
+    alignmentDF = "l",
     fgColorDF = colorWhiteAlt,
     bgColorDF = colorBlack,
     fontDF = dzenFont,
@@ -590,7 +586,7 @@ myBotLeftLogHook :: Handle -> X ()
 myBotLeftLogHook h = dynamicLogWithPP . namedScratchpadFilterOutWorkspacePP $ defaultPP
     {
     ppOutput = hPutStrLn h,
-    ppOrder = \(ws:_:_:x) -> [ ws ] ++ x,
+    ppOrder = \(ws:_:_:x) -> [ws] ++ x,
     ppSep = " ",
     ppWsSep = "",
     ppCurrent = dzenBoxStyle blue2BBoxPP,
@@ -645,11 +641,11 @@ myWifiL =
 
 myTempL =
     (dzenBoxStyleL gray2BoxPP $ labelL "TEMP") ++!
-    (dzenBoxStyleL blueBoxPP $ cpuTemp 2 70 colorRed)
+    (dzenBoxStyleL blueBoxPP $ cpuTemp 1 70 colorRed)
 
 myMemL =
     (dzenBoxStyleL gray2BoxPP $ labelL "MEM") ++!
-    (dzenBoxStyleL blueBoxPP $ memUsage [ percMemUsage, totMBMemUsage ])
+    (dzenBoxStyleL blueBoxPP $ memUsage [percMemUsage, totMBMemUsage])
 
 myCpuL =
     (dzenBoxStyleL gray2BoxPP $ labelL "CPU") ++!
@@ -685,19 +681,19 @@ myLayoutL =
     (dzenBoxStyleL whiteBoxPP $ onLogger (layoutText . removeWord . removeWord) logLayout) where
         removeWord xs = tail $ dropWhile (/= ' ') xs
         layoutText xs
-            | isPrefixOf "Mirror" xs = layoutText $ removeWord xs ++ "^fg(" ++ colorBlue ++ ")M^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
-            | isPrefixOf "ReflectY" xs = layoutText $ removeWord xs ++ "^fg(" ++ colorBlue ++ ")Y^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
-            | isPrefixOf "ReflectX" xs = layoutText $ removeWord xs ++ "^fg(" ++ colorBlue ++ ")X^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
-            | isPrefixOf "Switcher" xs = layoutText $ removeWord xs ++ "^fg(" ++ colorRed ++ ")S^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
-            | isPrefixOf "Normal" xs = layoutText $ removeWord xs ++ "^fg(" ++ colorGreen ++ ")N^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
-            | isPrefixOf "Unique" xs = layoutText $ removeWord xs ++ "^fg(" ++ colorGreen ++ ")U^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
+            | isPrefixOf "Mirror" xs = layoutText $ removeWord xs ++ " ^fg(" ++ colorBlue ++ ")M^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
+            | isPrefixOf "ReflectY" xs = layoutText $ removeWord xs ++ " ^fg(" ++ colorBlue ++ ")Y^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
+            | isPrefixOf "ReflectX" xs = layoutText $ removeWord xs ++ " ^fg(" ++ colorBlue ++ ")X^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
+            | isPrefixOf "Switcher" xs = layoutText $ removeWord xs ++ " ^fg(" ++ colorRed ++ ")S^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
+            | isPrefixOf "Normal" xs = layoutText $ removeWord xs ++ " ^fg(" ++ colorGreen ++ ")N^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
+            | isPrefixOf "Unique" xs = layoutText $ removeWord xs ++ " ^fg(" ++ colorGreen ++ ")U^fg(" ++ colorGray ++ ")|^fg(" ++ colorWhiteAlt ++ ")"
             | otherwise = concat $ reverse $ words xs
 
 myWorkspaceL =
     (dzenClickStyleL workspaceCA $ dzenBoxStyleL blue2BoxPP $ labelL "WORKSPACE") ++!
     (dzenBoxStyleL whiteBoxPP $ onLogger namedWorkspaces logCurrent) where
         namedWorkspaces w
-            | (elem w $ map show [ 0 .. 9 ]) = "^fg(" ++ colorGreen ++ ")" ++ w ++ "^fg(" ++ colorGray ++ ")|^fg()" ++ workSpaceNames !! (mod ((read w::Int) - 1) 10)
+            | (elem w $ map show [0 .. 9]) = "^fg(" ++ colorGreen ++ ")" ++ w ++ "^fg(" ++ colorGray ++ ")|^fg()" ++ workSpaceNames !! (mod ((read w::Int) - 1) 10)
             | otherwise = "^fg(" ++ colorRed ++ ")x^fg(" ++ colorGray ++ ")|^fg()" ++ w
 
 -- Bindings config
@@ -712,7 +708,7 @@ myKeys conf@(XConfig { XMonad.modMask = modMask }) = M.fromList $
     ((modMask, xK_F2), xmonadPrompt myXPConfig),
     --((mod1Mask, xK_F3), manPrompt myXPConfig),
     ((modMask, xK_g), goToSelected $ myGSConfig myColorizer),
-    ((modMask, xK_masculine), scratchPad),
+    ((modMask, 0X0060), scratchPad), -- xK_masculine
     ((modMask .|. shiftMask, xK_Return), spawn $ XMonad.terminal conf),
 
     -- window management bindings
@@ -720,7 +716,7 @@ myKeys conf@(XConfig { XMonad.modMask = modMask }) = M.fromList $
     ((modMask, xK_r), refresh),
     ((modMask, xK_j), windows W.focusDown), -- focus next
     ((modMask, xK_k), windows W.focusUp), -- focus prev
-    ((modMask, xK_m), windows W.focusMaster), -- focus master
+    ((modMask, xK_a), windows W.focusMaster), -- focus master
     ((modMask .|. shiftMask, xK_j), windows W.swapDown), -- swap next
     ((modMask .|. shiftMask, xK_k), windows W.swapUp), -- swap prev
     ((modMask .|. shiftMask, xK_m), windows W.swapMaster), -- swap master
@@ -730,6 +726,18 @@ myKeys conf@(XConfig { XMonad.modMask = modMask }) = M.fromList $
     ((modMask .|. shiftMask, xK_l), sendMessage MirrorExpand), -- mirror expand master
     ((modMask, xK_t), withFocused $ windows . W.sink), -- tile window
     ((modMask .|. shiftMask, xK_t), rectFloatFocused), -- float window
+    ((modMask, xK_m), withFocused minimizeWindow), -- minimize window
+    ((modMask .|. shiftMask, xK_m), sendMessage RestoreNextMinimizedWin), -- restore window
+    ((modMask, xK_b), withFocused (sendMessage . maximizeRestore)), -- maximize window
+    ((modMask .|. shiftMask, xK_f), fullFloatFocused), -- fullscreen
+    ((modMask, xK_Right), sendMessage $ Go R), -- focus right
+    ((modMask, xK_Left), sendMessage $ Go L), -- focus left
+    ((modMask, xK_Up), sendMessage $ Go U), -- focus up
+    ((modMask, xK_Down), sendMessage $ Go D), -- focus down
+    ((modMask .|. controlMask, xK_Right), sendMessage $ Swap R), -- swap right
+    ((modMask .|. controlMask, xK_Left), sendMessage $ Swap L), -- swap left
+    ((modMask .|. controlMask, xK_Up), sendMessage $ Swap U), -- swap up
+    ((modMask .|. controlMask, xK_Down), sendMessage $ Swap D), -- swap down
     ((modMask, xK_comma), sendMessage (IncMasterN 1)), -- increment master area
     ((modMask, xK_period), sendMessage (IncMasterN (-1))), -- decrement master area
 
@@ -741,10 +749,20 @@ myKeys conf@(XConfig { XMonad.modMask = modMask }) = M.fromList $
     ((modMask .|. controlMask, xK_f), sendMessage $ XMonad.Layout.MultiToggle.Toggle FLOATED),
     ((modMask .|. shiftMask, xK_x), sendMessage $ XMonad.Layout.MultiToggle.Toggle REFLECTX),
     ((modMask .|. shiftMask, xK_y), sendMessage $ XMonad.Layout.MultiToggle.Toggle REFLECTY),
-    ((modMask .|. shiftMask, xK_z), sendMessage $ XMonad.Layout.MultiToggle.Toggle MIRROR)
+    ((modMask .|. shiftMask, xK_z), sendMessage $ XMonad.Layout.MultiToggle.Toggle MIRROR),
+
+    -- scripts management bindings
+    ((modMask, xK_d), spawn "killall dzen2 haskell-cpu-usage.out"),
+
+    -- workspace management bindings
+    ((mod1Mask .|. controlMask, xK_Left), flashText myTextConfig 1 " Moved to previous workspace " >> prevWS),
+    ((mod1Mask .|. controlMask, xK_Right), flashText myTextConfig 1 " Moved to next workspace " >> nextWS),
+    ((modMask .|. shiftMask, xK_n), flashText myTextConfig 1 " Shifted to Next Workspace " >> shiftToNext),
+    ((modMask .|. shiftMask, xK_p), flashText myTextConfig 1 " Shifted to Previous Workspace " >> shiftToPrev)
     ] where
-        scratchPad = scratchpadSpawnActionCustom "urxvt -name scratchpad"
+        scratchPad = scratchpadSpawnActionCustom "urxvtc -name scratchpad"
         rectFloatFocused = withFocused $ \f -> windows =<< appEndo `fmap` runQuery (doRectFloat $ W.RationalRect 0.05 0.05 0.9 0.9) f
+        fullFloatFocused = withFocused $ \f -> windows =<< appEndo `fmap` runQuery doFullFloat f
         killAndExit =
             (spawn "killall dzen2 haskell-cpu-usage.out") <+>
             io (exitWith ExitSuccess)
@@ -790,7 +808,7 @@ data BoxPP = BoxPP
     boxColorBPP :: String,
     leftIconBPP :: String,
     rightIconBPP :: String,
-    boxHeightBPP :: String
+    boxHeightBPP :: Int
     }
 
 -- Dzen clickable area config
@@ -822,9 +840,14 @@ dzenBoxStyle :: BoxPP -> String -> String
 dzenBoxStyle bpp t =
         "^fg(" ++ (boxColorBPP bpp) ++
         ")^i(" ++ (leftIconBPP bpp) ++
+        ")^ib(1)^r(1920x" ++ (show $ boxHeightBPP bpp) ++
+        ")^p(-1920)^fg(" ++ (fgColorBPP bpp) ++
+        ")" ++ t ++
+        "^fg(" ++ (boxColorBPP bpp) ++
+        ")^i(" ++ (rightIconBPP bpp) ++
         ")^fg(" ++ (bgColorBPP bpp) ++
-        ")^r(1024x" ++ (show $ boxHeightBPP bpp) ++
-        ")^p(-1024)^fg()^ib(0)"
+        ")^r(1920x" ++ (show $ boxHeightBPP bpp) ++
+        ")^p(-1920)^fg()^ib(0)"
 
 -- Uses dzen format to make dzen text clickable
 dzenClickStyle :: CA -> String -> String
@@ -944,7 +967,7 @@ uptime = fileToLogger format "0" "/proc/uptime" where
     hr x = mod (u x) 3600
     m x = div (hr x) 60
     s x = mod (hr x) 60
-    format x = (show $ h x) ++ "h" ++ (show $ m x) ++ "m " ++ (show $ s x) ++ "s"
+    format x = (show $ h x) ++ "h " ++ (show $ m x) ++ "m " ++ (show $ s x) ++ "s"
 
 -- Gets current resolution given a display and a screen
 getScreenRes :: String -> Int -> IO Res
