@@ -298,41 +298,41 @@ green2BBoxPP = BoxPP
 calendarCA :: CA
 calendarCA = CA
     {
-    leftClickCA = "~/.xmonad/apps/dzencal.sh",
-    middleClickCA = "~/.xmonad/apps/dzencal.sh",
-    rightClickCA = "~/.xmonad/apps/dzencal.sh",
-    wheelUpCA = "~/.xmonad/apps/dzencal.sh",
-    wheelDownCA = "~/.xmonad/apps/dzencal.sh"
+    leftClickCA = "/home/pepi/.xmonad/apps/dzencal.sh",
+    middleClickCA = "/home/pepi/.xmonad/apps/dzencal.sh",
+    rightClickCA = "/home/pepi/.xmonad/apps/dzencal.sh",
+    wheelUpCA = "/home/pepi/.xmonad/apps/dzencal.sh",
+    wheelDownCA = "/home/pepi/.xmonad/apps/dzencal.sh"
     }
 
 layoutCA :: CA
 layoutCA = CA
     {
-    leftClickCA = "xdotool key super+space",
-    middleClickCA = "xdotool key super+v",
-    rightClickCA = "xdotool key super+shift+space",
-    wheelUpCA = "xdotool key super+f",
-    wheelDownCA = "xdotool key super+control+f"
+    leftClickCA = "/usr/bin/xdotool key super+space",
+    middleClickCA = "/usr/bin/xdotool key super+v",
+    rightClickCA = "/usr/bin/xdotool key super+shift+space",
+    wheelUpCA = "/usr/bin/xdotool key super+f",
+    wheelDownCA = "/usr/bin/xdotool key super+control+f"
     }
 
 workspaceCA :: CA
 workspaceCA = CA
     {
-    leftClickCA = "xdotool key super+1",
-    middleClickCA = "xdotool key super+g",
-    rightClickCA = "xdotool key super+0",
-    wheelUpCA = "xdotool key ctrl+alt+Right",
-    wheelDownCA = "xdotool key ctrl+alt+Left"
+    leftClickCA = "/usr/bin/xdotool key super+1",
+    middleClickCA = "/usr/bin/xdotool key super+g",
+    rightClickCA = "/usr/bin/xdotool key super+0",
+    wheelUpCA = "/usr/bin/xdotool key ctrl+alt+Right",
+    wheelDownCA = "/usr/bin/xdotool key ctrl+alt+Left"
     }
 
 focusCA :: CA
 focusCA = CA
     {
-    leftClickCA = "xdotool key super+m",
-    middleClickCA = "xdotool key super+c",
-    rightClickCA = "xdotool key super+shift+m",
-    wheelUpCA = "xdotool key super+shift+j",
-    wheelDownCA = "xdotool key super+shift+k"
+    leftClickCA = "/usr/bin/xdotool key super+m",
+    middleClickCA = "/usr/bin/xdotool key super+c",
+    rightClickCA = "/usr/bin/xdotool key super+shift+m",
+    wheelUpCA = "/usr/bin/xdotool key super+shift+j",
+    wheelDownCA = "/usr/bin/xdotool key super+shift+k"
     }
 
 -- Workspaces index (don't change)
@@ -632,7 +632,7 @@ myBotRightLogHook h = dynamicLogWithPP defaultPP
 -- Bottom right loggers
 myBatL =
     (dzenBoxStyleL gray2BoxPP $ labelL "BATTERY") ++!
-    (dzenBoxStyleL blueBoxPP $ batPercent 30 colorRed) ++!
+    (dzenBoxStyleL blueBoxPP $ batPercent 10 colorRed) ++!
     (dzenBoxStyleL whiteBoxPP batStatus)
 
 myWifiL =
@@ -759,7 +759,15 @@ myKeys conf@(XConfig { XMonad.modMask = modMask }) = M.fromList $
     ((mod1Mask .|. controlMask, xK_Right), flashText myTextConfig 1 " Moved to next workspace " >> nextWS),
     ((modMask .|. shiftMask, xK_n), flashText myTextConfig 1 " Shifted to Next Workspace " >> shiftToNext),
     ((modMask .|. shiftMask, xK_p), flashText myTextConfig 1 " Shifted to Previous Workspace " >> shiftToPrev)
-    ] where
+    ] ++
+    [
+    ((m .|. modMask, k), windows $ f i) | (i, k) <- zip (XMonad.workspaces conf) ([xK_1 .. xK_9] ++ [xK_0]),
+    (f, m) <- [(W.greedyView, 0), (W.shift, shiftMask)]
+    ] ++
+    [
+    ((m .|. modMask, key), screenWorkspace sc >>= flip whenJust (windows . f)) | (key, sc) <- zip [xK_w, xK_e, xK_r] [0 ..],
+    (f, m) <- [(W.view, 0), (W.shift, shiftMask)]
+    ]where
         scratchPad = scratchpadSpawnActionCustom "urxvtc -name scratchpad"
         rectFloatFocused = withFocused $ \f -> windows =<< appEndo `fmap` runQuery (doRectFloat $ W.RationalRect 0.05 0.05 0.9 0.9) f
         fullFloatFocused = withFocused $ \f -> windows =<< appEndo `fmap` runQuery doFullFloat f
@@ -852,11 +860,11 @@ dzenBoxStyle bpp t =
 -- Uses dzen format to make dzen text clickable
 dzenClickStyle :: CA -> String -> String
 dzenClickStyle ca t =
-    "^ca(1, " ++ leftClickCA ca ++
-    "^ca((2, " ++ middleClickCA ca ++
-    "^ca(3, " ++ rightClickCA ca ++
-    "^ca(4, " ++ wheelUpCA ca ++
-    "^ca(5, " ++ wheelDownCA ca ++
+    "^ca(1," ++ leftClickCA ca ++
+    ")^ca(2," ++ middleClickCA ca ++
+    ")^ca(3," ++ rightClickCA ca ++
+    ")^ca(4," ++ wheelUpCA ca ++
+    ")^ca(5," ++ wheelDownCA ca ++
     ")" ++ t ++
     "^ca()^ca()^ca()^ca()^ca()"
 
@@ -914,7 +922,7 @@ fileToLogger f e p = do
 -- Battery percent
 batPercent :: Int -> String -> Logger
 batPercent v c = fileToLogger format "N/A" "/sys/class/power_supply/BAT0/capacity" where
-    format x = if ((read x::Int) <= v) then "^fg(" ++ c ++ ")" ++ x ++ "$^fg()" else (x ++ "%")
+    format x = if ((read x::Int) <= v) then "^fg(" ++ c ++ ")" ++ x ++ "%^fg()" else (x ++ "%")
 
 -- Battery status
 batStatus :: Logger
